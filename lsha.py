@@ -10,10 +10,10 @@ pargs.add_argument('-t', default=False, dest='recursive', action='store_const', 
 pargs.add_argument('-x', default=False, dest='xattrs', action='store_const', const=True, help='include xattrs')
 pargs.add_argument('-p', default=False, dest='perms', action='store_const', const=True, help='include permissions')
 pargs.add_argument('-a', default=False, dest='all', action='store_const', const=True, help='include everything')
-pargs.add_argument('--algo:md5', dest='algo', action='store_const', const='md5', help='checksum will be md5')
-pargs.add_argument('--algo:sha1', dest='algo', action='store_const', const='sha1', help='checksum will be sha1')
-pargs.add_argument('--algo:sha256', dest='algo', action='store_const', const='sha256', help='checksum will be sha256 (default)')
-pargs.add_argument('--algo:sha512', dest='algo', action='store_const', const='sha512', help='checksum will be sha512')
+pargs.add_argument('--use:md5', dest='algo', action='store_const', const='md5', help='use md5 for checksum')
+pargs.add_argument('--use:sha1', dest='algo', action='store_const', const='sha1', help='use sha1 for checksum')
+pargs.add_argument('--use:sha256', dest='algo', action='store_const', const='sha256', help='use sha256 for checksum (default)')
+pargs.add_argument('--use:sha512', dest='algo', action='store_const', const='sha512', help='use sha512 for checksum')
 
 pargs.add_argument('path', type=str, help='path to list')
 arguments = pargs.parse_args()
@@ -56,13 +56,14 @@ def do_path(args, path):
     if is_hidden(path) and not (args.hidden or args.all):
         return
     for dirpath, dirnames, filenames in os.walk(path):
-        print('>', dirpath)
+
+        print(dirpath)
         if len(dirnames) > 0:
-            print('>>', ', '.join(dirnames))
+            print('(%s)' % ', '.join(dirnames))
 
         for filename in filenames:
-
             do_file(args, dirpath, filename)
+
         print()
 
         if not (args.recursive or args.all):
