@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
-import argparse, os, stat, pwd, grp, time, xattr, json, hashlib
+import argparse, os, stat, pwd, grp, time, xattr, hashlib
 
-pargs = argparse.ArgumentParser(description='List files and folders renovated. Useful to verify is things have changed.')
+pargs = argparse.ArgumentParser(
+    description='List files and folders renovated. Useful to verify is things have changed.',
+    epilog='Typical non-recursive usage: lsha.py -citxp .  (otherwise just -a)'
+)
+
 pargs.add_argument('-c', default=False, dest='checksum', action='store_const', const=True, help='checksum files')
 pargs.add_argument('-r', default=False, dest='recursive', action='store_const', const=True, help='walk recursively')
 pargs.add_argument('-i', default=False, dest='hidden', action='store_const', const=True, help='include hidden files')
@@ -14,7 +18,6 @@ pargs.add_argument('--use:md5', dest='algo', action='store_const', const='md5', 
 pargs.add_argument('--use:sha1', dest='algo', action='store_const', const='sha1', help='use sha1 for checksum')
 pargs.add_argument('--use:sha256', dest='algo', action='store_const', const='sha256', help='use sha256 for checksum (default)')
 pargs.add_argument('--use:sha512', dest='algo', action='store_const', const='sha512', help='use sha512 for checksum')
-
 pargs.add_argument('path', type=str, help='path to list')
 arguments = pargs.parse_args()
 
@@ -40,7 +43,7 @@ def do_checksum(args, fullpath):
 
 
 def get_mock_checksum(args):
-    base = '::'
+    base = ':.'
     if args.algo == 'md5': return base * 16
     elif args.algo == 'sha1': return base * 20
     elif args.algo == 'sha512': return base * 64
@@ -100,9 +103,9 @@ def do_entry(args, path, filename):
     out = ''
     if args.checksum or args.all:
         if stats.st_mode & stat.S_IFREG == stat.S_IFREG:
-            out += do_checksum(args, fullpath) + ' '
+            out += do_checksum(args, fullpath) + '  '
         else:
-            out += get_mock_checksum(args) + ' '
+            out += get_mock_checksum(args) + '  '
     if args.perms or args.all:
         out += stats_to_str(stats)
         out += "%6s %6s" % (passwd.pw_name, group.gr_name)
@@ -139,4 +142,7 @@ def do_path(args, path):
 if os.path.isfile(arguments.path):
     do_entry(arguments, arguments.path)
 else:
-    do_path(arguments, arguments.path)
+    path = arguments.path
+    while path[-1] == '/':
+        path = path[0:-1]
+    do_path(arguments, path)
