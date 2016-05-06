@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, os, hashlib
+import argparse, os, stat, pwd, grp, hashlib
 
 pargs = argparse.ArgumentParser(description='List files and folders renovated. Useful to verify is things have changed.')
 pargs.add_argument('-c', default=False, dest='checksum', action='store_const', const=True, help='checksum files')
@@ -39,17 +39,57 @@ def do_checksum(args, fullpath):
     return h.hexdigest()
 
 
+def get_mock_checksum(args):
+    base = '::'
+    if args.algo == 'md5': return base * 16
+    elif args.algo == 'sha1': return base * 20
+    elif args.algo == 'sha512': return base * 64
+    return base * 32
+
+
+def rwx(mode, rm, wm, xm):
+    r = 'r' if mode & rm == rm else '-'
+    r += 'w' if mode & wm == wm else '-'
+    r += 'x' if mode & xm == xm else '-'
+    return r
+
+
+def dbpcs(mode):
+    if mode & stat.S_IFLNK == stat.S_IFLNK: return 's'
+    if mode & stat.S_IFREG == stat.S_IFREG: return '-'
+    if mode & stat.S_IFBLK == stat.S_IFBLK: return 'b'
+    if mode & stat.S_IFDIR == stat.S_IFDIR: return 'd'
+    if mode & stat.S_IFIFO == stat.S_IFIFO: return 'p'
+    if mode & stat.S_IFCHR == stat.S_IFCHR: return 'c'
+    return '?'
+
+
+def stats_to_str(s):
+    return "%s%s%s%s" % (dbpcs(s.st_mode),
+        rwx(s.st_mode, stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR),
+        rwx(s.st_mode, stat.S_IRGRP, stat.S_IWGRP, stat.S_IXGRP),
+        rwx(s.st_mode, stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH))
+
+
 def do_file(args, path, filename):
     fullpath = "%s/%s" % (path, filename)
     if is_hidden(fullpath) and not (args.hidden or args.all):
         return
 
+    stats = os.stat(fullpath)
+
     if args.checksum or args.all:
-        checksum = do_checksum(args, fullpath)
+        if stats.st_mode & stat.S_IFREG == stat.S_IFREG:
+            checksum = do_checksum(args, fullpath)
+        else:
+            checksum = get_mock_checksum(args)
     else:
         checksum = ''
 
-    print('%s %s' % (checksum, filename))
+    passwd = pwd.getpwuid(stats.st_uid)
+    group = grp.getgrgid(stats.st_gid)
+
+    print('%s %s %6s %6s %10i %s' % (checksum, stats_to_str(stats), passwd.pw_name, group.gr_name, stats.st_size, filename))
 
 
 def do_path(args, path):
@@ -59,10 +99,10 @@ def do_path(args, path):
 
         print(dirpath)
         if len(dirnames) > 0:
-            print('(%s)' % ', '.join(dirnames))
+            print('{ %s }' % ', '.join(dirnames))
 
         for filename in filenames:
-            do_file(args, dirpath, filename)
+           do_file(args, dirpath, filename)
 
         print()
 
