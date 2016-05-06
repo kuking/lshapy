@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, os, stat, pwd, grp, time, hashlib
+import argparse, os, stat, pwd, grp, time, xattr, json, hashlib
 
 pargs = argparse.ArgumentParser(description='List files and folders renovated. Useful to verify is things have changed.')
 pargs.add_argument('-c', default=False, dest='checksum', action='store_const', const=True, help='checksum files')
@@ -71,7 +71,23 @@ def stats_to_str(s):
         rwx(s.st_mode, stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH))
 
 
-def do_file(args, path, filename):
+def xt_to_str(xt):
+    if len(xt.keys()) == 0:
+        return ''
+    r = '\n'
+    for key in xt.keys():
+        h = hashlib.md5()
+        h.update(xt[key])
+        val = xt[key]
+        if len(val) > 10:
+            value = str(val[:10]) + ' (%i bytes)' % len(val)
+        else:
+            value = str(val)
+        r += ' +xattr (md5:%s) %s = %s \n' % (h.hexdigest(), key, value)
+    return r[:-1]
+
+
+def do_entry(args, path, filename):
     fullpath = "%s/%s" % (path, filename)
     if is_hidden(fullpath) and not (args.hidden or args.all):
         return
@@ -79,6 +95,8 @@ def do_file(args, path, filename):
     stats = os.stat(fullpath)
     passwd = pwd.getpwuid(stats.st_uid)
     group = grp.getgrgid(stats.st_gid)
+    xt = xattr.xattr(fullpath)
+
     out = ''
     if args.checksum or args.all:
         if stats.st_mode & stat.S_IFREG == stat.S_IFREG:
@@ -92,6 +110,8 @@ def do_file(args, path, filename):
     if args.timestamp or args.all:
         out += time.strftime("%Y-%m-%d %H:%M:%S %Z  ", time.gmtime(stats.st_mtime))
     out += filename
+    if args.xattrs or args.all:
+        out += xt_to_str(xt)
 
     print(out)
 
@@ -99,14 +119,14 @@ def do_file(args, path, filename):
 def do_path(args, path):
     if is_hidden(path) and not (args.hidden or args.all):
         return
+
     for dirpath, dirnames, filenames in os.walk(path):
 
         print(dirpath)
-        for dirname in dirnames:
-            do_file(args, dirpath, dirname)
+        for dir_name in dirnames:
+            do_entry(args, dirpath, dir_name)
         for filename in filenames:
-           do_file(args, dirpath, filename)
-
+            do_entry(args, dirpath, filename)
         print()
 
         if not (args.recursive or args.all):
@@ -117,6 +137,6 @@ def do_path(args, path):
 # main
 
 if os.path.isfile(arguments.path):
-    do_file(arguments, arguments.path)
+    do_entry(arguments, arguments.path)
 else:
     do_path(arguments, arguments.path)
