@@ -59,6 +59,7 @@ def rwx(mode, rm, wm, xm):
 
 def dbpcs(mode):
     if mode & stat.S_IFLNK == stat.S_IFLNK: return 's'
+    if mode & stat.S_IFSOCK == stat.S_IFSOCK: return 's'
     if mode & stat.S_IFREG == stat.S_IFREG: return '-'
     if mode & stat.S_IFBLK == stat.S_IFBLK: return 'b'
     if mode & stat.S_IFDIR == stat.S_IFDIR: return 'd'
@@ -102,7 +103,7 @@ def do_entry(args, path, filename):
 
     out = ''
     if args.checksum or args.all:
-        if stats.st_mode & stat.S_IFREG == stat.S_IFREG:
+        if dbpcs(stats.st_mode)[0] == '-':
             out += do_checksum(args, fullpath) + '  '
         else:
             out += get_mock_checksum(args) + '  '
