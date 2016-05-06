@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-import argparse, os, stat, pwd, grp, hashlib
+import argparse, os, stat, pwd, grp, time, hashlib
 
 pargs = argparse.ArgumentParser(description='List files and folders renovated. Useful to verify is things have changed.')
 pargs.add_argument('-c', default=False, dest='checksum', action='store_const', const=True, help='checksum files')
 pargs.add_argument('-r', default=False, dest='recursive', action='store_const', const=True, help='walk recursively')
 pargs.add_argument('-i', default=False, dest='hidden', action='store_const', const=True, help='include hidden files')
-pargs.add_argument('-t', default=False, dest='recursive', action='store_const', const=True, help='include timestamps')
+pargs.add_argument('-t', default=False, dest='timestamp', action='store_const', const=True, help='include timestamps')
 pargs.add_argument('-x', default=False, dest='xattrs', action='store_const', const=True, help='include xattrs')
 pargs.add_argument('-p', default=False, dest='perms', action='store_const', const=True, help='include permissions')
 pargs.add_argument('-a', default=False, dest='all', action='store_const', const=True, help='include everything')
@@ -77,19 +77,23 @@ def do_file(args, path, filename):
         return
 
     stats = os.stat(fullpath)
-
-    if args.checksum or args.all:
-        if stats.st_mode & stat.S_IFREG == stat.S_IFREG:
-            checksum = do_checksum(args, fullpath)
-        else:
-            checksum = get_mock_checksum(args)
-    else:
-        checksum = ''
-
     passwd = pwd.getpwuid(stats.st_uid)
     group = grp.getgrgid(stats.st_gid)
+    out = ''
+    if args.checksum or args.all:
+        if stats.st_mode & stat.S_IFREG == stat.S_IFREG:
+            out += do_checksum(args, fullpath) + ' '
+        else:
+            out += get_mock_checksum(args) + ' '
+    if args.perms or args.all:
+        out += stats_to_str(stats)
+        out += "%6s %6s" % (passwd.pw_name, group.gr_name)
+    out += "%10i " % stats.st_size
+    if args.timestamp or args.all:
+        out += time.strftime("%Y-%m-%d %H:%M:%S %Z  ", time.gmtime(stats.st_mtime))
+    out += filename
 
-    print('%s %s %6s %6s %10i %s' % (checksum, stats_to_str(stats), passwd.pw_name, group.gr_name, stats.st_size, filename))
+    print(out)
 
 
 def do_path(args, path):
@@ -98,9 +102,8 @@ def do_path(args, path):
     for dirpath, dirnames, filenames in os.walk(path):
 
         print(dirpath)
-        if len(dirnames) > 0:
-            print('{ %s }' % ', '.join(dirnames))
-
+        for dirname in dirnames:
+            do_file(args, dirpath, dirname)
         for filename in filenames:
            do_file(args, dirpath, filename)
 
