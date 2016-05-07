@@ -109,8 +109,8 @@ def do_entry(args, path, filename):
             out += get_mock_checksum(args) + '  '
     if args.perms or args.all:
         out += stats_to_str(stats)
-        out += "%6s %6s" % (passwd.pw_name, group.gr_name)
-    out += "%10i " % stats.st_size
+        out += "%6s %6s " % (passwd.pw_name, group.gr_name)
+    out += "%11i " % stats.st_size
     if args.timestamp or args.all:
         out += time.strftime("%Y-%m-%d %H:%M:%S %Z  ", time.gmtime(stats.st_mtime))
     out += filename
