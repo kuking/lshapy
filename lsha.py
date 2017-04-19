@@ -122,7 +122,7 @@ def do_entry(args, path, filename):
         out += "%6s %6s " % (passwd.pw_name, group.gr_name)
     out += "%11i " % stats.st_size
     if args.timestamp or args.all:
-        out += time.strftime("%Y-%m-%d %H:%M:%S %Z  ", time.gmtime(stats.st_mtime))
+        out += time.strftime("%Y-%m-%d %H:%M:%S %Z ", time.gmtime(stats.st_mtime))
     if args.file_path or args.all:
         out += path + '/'
     out += filename
