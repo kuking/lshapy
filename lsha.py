@@ -19,11 +19,11 @@ pargs.add_argument('--use:md5', dest='algo', action='store_const', const='md5', 
 pargs.add_argument('--use:sha1', dest='algo', action='store_const', const='sha1', help='use sha1 for checksum')
 pargs.add_argument('--use:sha256', dest='algo', action='store_const', const='sha256', help='use sha256 for checksum (default)')
 pargs.add_argument('--use:sha512', dest='algo', action='store_const', const='sha512', help='use sha512 for checksum')
-pargs.add_argument('--e:xattr', dest='xattrs', action='store_const', const=False, help='disable xattrs (useful with -a)')
+pargs.add_argument('--e:xattr', dest='xattrs', action='store_const', const='EXCL', help='disable xattrs (useful with -a)')
 pargs.add_argument('path', type=str, help='path to list')
 arguments = pargs.parse_args()
 
-if (arguments.xattrs or arguments.all) and arguments.xattrs is not False:
+if (arguments.xattrs or arguments.all) and arguments.xattrs is not 'EXCL':
     try:
         import xattr
     except ImportError:
@@ -107,7 +107,7 @@ def do_entry(args, path, filename):
     stats = os.stat(fullpath)
     passwd = pwd.getpwuid(stats.st_uid)
     group = grp.getgrgid(stats.st_gid)
-    if (args.xattrs or args.all) and args.xattrs is not False:
+    if (args.xattrs or args.all) and args.xattrs is not 'EXCL':
         xt = xattr.xattr(fullpath)
     else:
         xt = {}
@@ -127,7 +127,7 @@ def do_entry(args, path, filename):
     if args.file_path or args.all:
         out += path + '/'
     out += filename
-    if (args.xattrs or args.all) and args.xattrs is not False:
+    if (args.xattrs or args.all) and args.xattrs is not 'EXCL':
         out += xt_to_str(xt)
 
     print(out)
