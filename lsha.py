@@ -131,6 +131,7 @@ def do_entry(args, path, filename):
         out += xt_to_str(xt)
 
     print(out)
+    sys.stdout.flush()
 
 
 def do_path(args, path):
