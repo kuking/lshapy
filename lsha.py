@@ -139,10 +139,8 @@ def do_path(args, path):
         return
 
     for dirpath, dirnames, filenames in os.walk(path):
-
-        dirnames = sorted(dirnames)
-        filenames = sorted(filenames)
-
+        dirnames.sort()
+        filenames.sort()
         print(dirpath)
         for dir_name in dirnames:
             do_entry(args, dirpath, dir_name)
