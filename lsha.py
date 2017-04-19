@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse, os, stat, pwd, grp, time, xattr, hashlib
+import argparse, sys, os, stat, pwd, grp, time, hashlib
 
 pargs = argparse.ArgumentParser(
     description='List files and folders renovated. Useful to verify is things have changed.',
@@ -21,6 +21,12 @@ pargs.add_argument('--use:sha512', dest='algo', action='store_const', const='sha
 pargs.add_argument('path', type=str, help='path to list')
 arguments = pargs.parse_args()
 
+if arguments.xattrs or arguments.all:
+    try:
+        import xattr
+    except ImportError:
+        print('please install xattr to use -x option (can be implied by -a)')
+        sys.exit(-1)
 
 def is_hidden(path):
     name = os.path.basename(os.path.abspath(path))
@@ -99,7 +105,10 @@ def do_entry(args, path, filename):
     stats = os.stat(fullpath)
     passwd = pwd.getpwuid(stats.st_uid)
     group = grp.getgrgid(stats.st_gid)
-    xt = xattr.xattr(fullpath)
+    if args.xattrs or args.all:
+        xt = xattr.xattr(fullpath)
+    else:
+        xt = {}
 
     out = ''
     if args.checksum or args.all:
