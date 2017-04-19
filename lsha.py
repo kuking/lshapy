@@ -13,15 +13,16 @@ pargs.add_argument('-i', default=False, dest='hidden', action='store_const', con
 pargs.add_argument('-t', default=False, dest='timestamp', action='store_const', const=True, help='include timestamps')
 pargs.add_argument('-x', default=False, dest='xattrs', action='store_const', const=True, help='include xattrs')
 pargs.add_argument('-p', default=False, dest='perms', action='store_const', const=True, help='include permissions')
-pargs.add_argument('-f', default=False, dest='file_path', action='store_const', const=True, help='display path with each file')
+pargs.add_argument('-f', default=False, dest='file_path', action='store_const', const=True, help='path + file per-line')
 pargs.add_argument('-a', default=False, dest='all', action='store_const', const=True, help='include everything')
-pargs.add_argument('--use:md5', dest='algo', action='store_const', const='md5', help='use md5 for checksum')
-pargs.add_argument('--use:sha1', dest='algo', action='store_const', const='sha1', help='use sha1 for checksum')
-pargs.add_argument('--use:sha256', dest='algo', action='store_const', const='sha256', help='use sha256 for checksum (default)')
-pargs.add_argument('--use:sha512', dest='algo', action='store_const', const='sha512', help='use sha512 for checksum')
-pargs.add_argument('--e:x', dest='xattrs', action='store_const', const='EXCL', help='disable xattrs (useful after -a)')
-pargs.add_argument('--e:c', dest='checksum', action='store_const', const='EXCL', help='disable checksum (")')
-pargs.add_argument('path', type=str, help='path to list')
+pargs.add_argument('-c:md5', dest='algo', action='store_const', const='md5', help='use md5 checksum')
+pargs.add_argument('-c:sha1', dest='algo', action='store_const', const='sha1', help='use sha1 checksum')
+pargs.add_argument('-c:sha256', dest='algo', action='store_const', const='sha256', help='use sha256 checksum (default)')
+pargs.add_argument('-c:sha384', dest='algo', action='store_const', const='sha384', help='use sha384 checksum')
+pargs.add_argument('-c:sha512', dest='algo', action='store_const', const='sha512', help='use sha512 checksum')
+pargs.add_argument('-e:x', dest='xattrs', action='store_const', const='EXCL', help='disable xattrs (useful after -a)')
+pargs.add_argument('-e:c', dest='checksum', action='store_const', const='EXCL', help='disable checksum (")')
+pargs.add_argument('path', type=str, nargs='+', help='path to lsha.py!')
 arguments = pargs.parse_args()
 
 
@@ -39,12 +40,14 @@ def do_checksum(args, fullpath):
         h = hashlib.md5()
     elif args.algo == 'sha1':
         h = hashlib.sha1()
+    elif args.algo == 'sha384':
+        h = hashlib.sha384()
     elif args.algo == 'sha512':
         h = hashlib.sha512()
     else: # default
         h = hashlib.sha256()
     with open(fullpath, 'rb') as f:
-        for chunk in iter(lambda: f.read(8096), b""):
+        for chunk in iter(lambda: f.read(65535), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -53,6 +56,7 @@ def get_mock_checksum(args):
     base = ':.'
     if args.algo == 'md5': return base * 16
     elif args.algo == 'sha1': return base * 20
+    elif args.algo == 'sha384': return base * 48
     elif args.algo == 'sha512': return base * 64
     return base * 32
 
@@ -162,10 +166,12 @@ if arg_applies(arguments.xattrs):
         sys.exit(-1)
 
 
-if os.path.isfile(arguments.path):
-    do_entry(arguments, arguments.path)
-else:
-    path = arguments.path
-    while path[-1] == '/':
-        path = path[0:-1]
-    do_path(arguments, path)
+for path in arguments.path:
+    if os.path.isfile(path):
+        do_entry(arguments, path)
+    else:
+        while path[-1] == '/':
+            path = path[0:-1]
+        do_path(arguments, path)
+
+print('lsha.py:EOF')
