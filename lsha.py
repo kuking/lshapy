@@ -13,15 +13,17 @@ pargs.add_argument('-i', default=False, dest='hidden', action='store_const', con
 pargs.add_argument('-t', default=False, dest='timestamp', action='store_const', const=True, help='include timestamps')
 pargs.add_argument('-x', default=False, dest='xattrs', action='store_const', const=True, help='include xattrs')
 pargs.add_argument('-p', default=False, dest='perms', action='store_const', const=True, help='include permissions')
+pargs.add_argument('-f', default=False, dest='file_path', action='store_const', const=True, help='display path with each file')
 pargs.add_argument('-a', default=False, dest='all', action='store_const', const=True, help='include everything')
 pargs.add_argument('--use:md5', dest='algo', action='store_const', const='md5', help='use md5 for checksum')
 pargs.add_argument('--use:sha1', dest='algo', action='store_const', const='sha1', help='use sha1 for checksum')
 pargs.add_argument('--use:sha256', dest='algo', action='store_const', const='sha256', help='use sha256 for checksum (default)')
 pargs.add_argument('--use:sha512', dest='algo', action='store_const', const='sha512', help='use sha512 for checksum')
+pargs.add_argument('--e:xattr', dest='xattrs', action='store_const', const=False, help='disable xattrs (useful with -a)')
 pargs.add_argument('path', type=str, help='path to list')
 arguments = pargs.parse_args()
 
-if arguments.xattrs or arguments.all:
+if (arguments.xattrs or arguments.all) and arguments.xattrs is not False:
     try:
         import xattr
     except ImportError:
@@ -105,7 +107,7 @@ def do_entry(args, path, filename):
     stats = os.stat(fullpath)
     passwd = pwd.getpwuid(stats.st_uid)
     group = grp.getgrgid(stats.st_gid)
-    if args.xattrs or args.all:
+    if (args.xattrs or args.all) and args.xattrs is not False:
         xt = xattr.xattr(fullpath)
     else:
         xt = {}
@@ -122,8 +124,10 @@ def do_entry(args, path, filename):
     out += "%11i " % stats.st_size
     if args.timestamp or args.all:
         out += time.strftime("%Y-%m-%d %H:%M:%S %Z  ", time.gmtime(stats.st_mtime))
+    if args.file_path or args.all:
+        out += path + '/'
     out += filename
-    if args.xattrs or args.all:
+    if (args.xattrs or args.all) and args.xattrs is not False:
         out += xt_to_str(xt)
 
     print(out)
