@@ -19,16 +19,15 @@ pargs.add_argument('--use:md5', dest='algo', action='store_const', const='md5', 
 pargs.add_argument('--use:sha1', dest='algo', action='store_const', const='sha1', help='use sha1 for checksum')
 pargs.add_argument('--use:sha256', dest='algo', action='store_const', const='sha256', help='use sha256 for checksum (default)')
 pargs.add_argument('--use:sha512', dest='algo', action='store_const', const='sha512', help='use sha512 for checksum')
-pargs.add_argument('--e:xattr', dest='xattrs', action='store_const', const='EXCL', help='disable xattrs (useful with -a)')
+pargs.add_argument('--e:x', dest='xattrs', action='store_const', const='EXCL', help='disable xattrs (useful after -a)')
+pargs.add_argument('--e:c', dest='checksum', action='store_const', const='EXCL', help='disable checksum (")')
 pargs.add_argument('path', type=str, help='path to list')
 arguments = pargs.parse_args()
 
-if (arguments.xattrs or arguments.all) and arguments.xattrs is not 'EXCL':
-    try:
-        import xattr
-    except ImportError:
-        print('please install xattr to use -x option (can be implied by -a)')
-        sys.exit(-1)
+
+def arg_applies(arg):
+    return (arg or arguments.all) and arg is not 'EXCL'
+
 
 def is_hidden(path):
     name = os.path.basename(os.path.abspath(path))
@@ -107,13 +106,13 @@ def do_entry(args, path, filename):
     stats = os.stat(fullpath)
     passwd = pwd.getpwuid(stats.st_uid)
     group = grp.getgrgid(stats.st_gid)
-    if (args.xattrs or args.all) and args.xattrs is not 'EXCL':
+    if arg_applies(args.xattrs):
         xt = xattr.xattr(fullpath)
     else:
         xt = {}
 
     out = ''
-    if args.checksum or args.all:
+    if arg_applies(args.checksum):
         if dbpcs(stats.st_mode)[0] == '-':
             out += do_checksum(args, fullpath) + '  '
         else:
@@ -127,7 +126,7 @@ def do_entry(args, path, filename):
     if args.file_path or args.all:
         out += path + '/'
     out += filename
-    if (args.xattrs or args.all) and args.xattrs is not 'EXCL':
+    if arg_applies(args.xattrs):
         out += xt_to_str(xt)
 
     print(out)
@@ -154,6 +153,14 @@ def do_path(args, path):
 
 
 # main
+
+if arg_applies(arguments.xattrs):
+    try:
+        import xattr
+    except ImportError:
+        print('please install xattr to use -x option (can be implied by -a)')
+        sys.exit(-1)
+
 
 if os.path.isfile(arguments.path):
     do_entry(arguments, arguments.path)
